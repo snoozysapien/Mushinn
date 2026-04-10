@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Snoozy_sapiens — Focus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:#111}
+
+/* ─── BACKGROUND ─────────────────────────────── */
+#bg{position:fixed;inset:0;z-index:0}
+#bg-a,#bg-b{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity 2s cubic-bezier(.4,0,.2,1)}
+#bg-b{opacity:0}
+/* very light dim — let the art breathe */
+#bg-dim{position:absolute;inset:0;background:rgba(0,0,0,0.18);pointer-events:none}
+/* soft vignette at edges only */
+#bg-vig{position:absolute;inset:0;background:radial-gradient(ellipse 90% 80% at 50% 50%,transparent 40%,rgba(0,0,0,0.38) 100%);pointer-events:none}
+
+/* ─── SHELL GRID ─────────────────────────────── */
+#shell{position:fixed;inset:0;z-index:2;display:grid;grid-template-rows:60px 1fr 68px}
+
+/* ─── TOP BAR ────────────────────────────────── */
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.logo{font-family:'DM Sans',sans-serif;font-size:13px;letter-spacing:.04em;color:rgba(255,255,255,0.6);font-weight:500}
+.nav-pills{display:flex;gap:5px}
+/* single settings icon top-right just like reference */
+.icon-btn{
+  width:36px;height:36px;border-radius:50%;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  color:rgba(255,255,255,0.6);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.icon-btn:hover,.icon-btn.on{border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.16);color:#fff}
+.icon-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ─── CENTER: TIMER FLOATS OVER BG ──────────── */
+#center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 20px}
+
+/* tiny session label above clock */
+#sess-label{
+  font-size:10px;font-weight:500;letter-spacing:.28em;
+  color:rgba(255,255,255,0.5);text-transform:uppercase;
+  margin-bottom:16px;
+}
+
+/* the big clock — no card, just text on background */
+#clock{
+  font-family:'DM Mono',monospace;font-size:88px;font-weight:300;
+  color:#fff;letter-spacing:-4px;line-height:1;
+  font-variant-numeric:tabular-nums;
+  /* soft glow to make it readable over any bg */
+  text-shadow:0 0 40px rgba(0,0,0,0.5),0 2px 8px rgba(0,0,0,0.35);
+  margin-bottom:6px;
+}
+
+/* progress bar — replaces ring */
+#clock-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:20px}
+#prog-bar-wrap{width:260px;margin-bottom:18px;display:flex;flex-direction:column;gap:5px}
+#prog-track{width:100%;height:2px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden}
+#prog-fill{height:100%;width:100%;background:rgba(255,255,255,0.72);border-radius:2px;transition:width 1s linear,background .6s ease;box-shadow:0 0 6px rgba(255,255,255,0.25)}
+
+/* session pips */
+.pips{display:flex;gap:6px;margin-bottom:18px}
+.pip{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.2);transition:all .4s}
+.pip.lit{background:rgba(255,255,255,0.8);transform:scale(1.2)}
+
+/* ─── CTA BUTTONS ────────────────────────────── */
+/* START button: just text, no heavy card */
+#btn-start{
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.25);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  padding:13px 40px;border-radius:40px;cursor:pointer;
+  transition:all .22s;
+  text-shadow:0 1px 4px rgba(0,0,0,0.3);
+}
+#btn-start:hover{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.45);transform:translateY(-1px)}
+
+.running-btns{display:none;align-items:center;gap:8px}
+#btn-pause{
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.22);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  padding:13px 34px;border-radius:40px;cursor:pointer;
+  transition:all .22s;
+}
+#btn-pause:hover{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4)}
+#btn-reset{
+  width:44px;height:44px;border-radius:50%;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  color:rgba(255,255,255,0.7);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .22s;flex-shrink:0;
+}
+#btn-reset:hover{background:rgba(255,255,255,0.16);border-color:rgba(255,255,255,0.35);color:#fff}
+#btn-reset svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* break tint */
+.brk-mode #clock{color:rgba(180,240,200,0.95)}
+.brk-mode .r-fill{stroke:rgba(140,220,170,0.75)}
+.brk-mode #btn-start{background:rgba(140,220,170,0.15);border-color:rgba(140,220,170,0.35);color:rgba(200,255,220,0.95)}
+
+/* ─── TASK STRIP (below timer, like reference) ─ */
+#task-strip{
+  margin-top:24px;width:100%;max-width:460px;
+  background:rgba(20,18,24,0.38);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:16px;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  overflow:hidden;
+}
+#task-strip-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px 10px;
+}
+#task-strip-label{font-size:10px;font-weight:600;letter-spacing:.2em;color:rgba(255,255,255,0.4);text-transform:uppercase}
+#task-add-btn{
+  width:26px;height:26px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.55);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .18s;line-height:1;font-family:'DM Sans',sans-serif;
+}
+#task-add-btn:hover{background:rgba(255,255,255,0.16);color:#fff}
+#task-strip-input-row{display:none;padding:0 12px 12px;gap:6px}
+#task-strip-input-row.show{display:flex}
+#ts-inp{
+  flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+  border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;
+  padding:8px 11px;outline:none;transition:border .18s;
+}
+#ts-inp:focus{border-color:rgba(255,255,255,0.28)}
+#ts-inp::placeholder{color:rgba(255,255,255,0.25)}
+#ts-prio{
+  width:64px;flex-shrink:0;background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.12);border-radius:8px;
+  color:rgba(255,255,255,0.65);font-size:12px;padding:8px 8px;
+  outline:none;cursor:pointer;appearance:none;font-family:'DM Sans',sans-serif;
+}
+#ts-save{
+  padding:8px 14px;border-radius:8px;
+  background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .18s;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;
+}
+#ts-save:hover{background:rgba(255,255,255,0.22)}
+#task-strip-list{max-height:180px;overflow-y:auto}
+#task-strip-list::-webkit-scrollbar{width:2px}
+#task-strip-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.ts-empty{text-align:center;font-size:12px;color:rgba(255,255,255,0.25);padding:14px 0;font-style:italic}
+.ts-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px;border-top:1px solid rgba(255,255,255,0.05);
+  cursor:pointer;transition:background .18s;
+}
+.ts-item:hover{background:rgba(255,255,255,0.05)}
+.ts-item.ts-active{background:rgba(255,255,255,0.07)}
+.ts-item.ts-done .ts-txt{text-decoration:line-through;color:rgba(255,255,255,0.25)}
+.ts-ck{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.22);flex-shrink:0;transition:all .2s;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ts-ck.c{background:rgba(255,255,255,0.65);border-color:transparent}
+.ts-ck.c::after{content:'';width:5px;height:5px;background:#111;border-radius:50%}
+.ts-txt{font-size:12px;color:rgba(255,255,255,0.75);flex:1;line-height:1.35}
+.ts-badge{font-size:9px;padding:2px 6px;border-radius:10px;flex-shrink:0;font-weight:500;letter-spacing:.04em}
+.bh{background:rgba(220,70,50,.12);color:rgba(255,130,100,.82);border:1px solid rgba(220,70,50,.18)}
+.bm{background:rgba(210,160,25,.1);color:rgba(255,200,78,.82);border:1px solid rgba(210,160,25,.18)}
+.bl{background:rgba(50,180,85,.09);color:rgba(85,220,125,.75);border:1px solid rgba(50,180,85,.16)}
+.ts-del{background:none;border:none;color:rgba(255,255,255,0.18);cursor:pointer;font-size:13px;padding:0 2px;transition:color .18s;font-family:'DM Sans',sans-serif;flex-shrink:0}
+.ts-del:hover{color:rgba(255,80,60,.7)}
+
+/* ─── BOTTOM SCENE BAR ───────────────────────── */
+#bottombar{display:flex;align-items:center;justify-content:center}
+.scene-pill{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(12,10,16,0.36);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:40px;padding:7px 14px 7px 9px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.sc{width:24px;height:24px;border-radius:50%;cursor:pointer;border:1.5px solid transparent;transition:all .22s;background-size:cover;background-position:center;flex-shrink:0}
+.sc:hover{transform:scale(1.14)}
+.sc.on{border-color:rgba(255,255,255,0.85);box-shadow:0 0 6px rgba(255,255,255,0.2)}
+#sc-label{font-size:11px;color:rgba(255,255,255,0.38);letter-spacing:.06em;padding-left:2px;white-space:nowrap}
+
+/* ─── SLIDE PANELS ───────────────────────────── */
+/* much less opaque — like the reference screenshot */
+.panel{
+  position:fixed;top:0;bottom:0;width:300px;z-index:30;
+  /* KEY: much less black, more transparent */
+  background:rgba(15,13,20,0.52);
+  border:1px solid rgba(255,255,255,0.1);
+  backdrop-filter:blur(36px);-webkit-backdrop-filter:blur(36px);
+  display:flex;flex-direction:column;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  will-change:transform;
+}
+/* subtle top-left highlight to show glass depth */
+.panel::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,transparent 50%);pointer-events:none;border-radius:inherit}
+.panel.left{left:0;border-radius:0 18px 18px 0;transform:translateX(-100%);background:rgba(15,13,20,0.15)}
+.panel.right{right:0;border-radius:18px 0 0 18px;transform:translateX(100%)}
+.panel.open{transform:none}
+
+.ph{display:flex;align-items:center;justify-content:space-between;padding:22px 18px 14px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0}
+.ph-title{font-size:10px;font-weight:600;letter-spacing:.2em;color:rgba(255,255,255,0.38);text-transform:uppercase}
+.ph-x{
+  width:26px;height:26px;border-radius:6px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.35);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;line-height:1;transition:all .18s;
+  font-family:'DM Sans',sans-serif;
+}
+.ph-x:hover{background:rgba(255,255,255,0.12);color:#fff}
+
+.pb{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.pb::-webkit-scrollbar{width:2px}
+.pb::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+
+/* shared panel atoms */
+.p-lbl{font-size:10px;font-weight:600;letter-spacing:.16em;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:2px}
+.p-hr{border:none;border-top:1px solid rgba(255,255,255,0.06);margin:0}
+.inp{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);
+  border-radius:8px;color:rgba(255,255,255,0.9);font-family:'DM Sans',sans-serif;
+  font-size:13px;padding:9px 12px;width:100%;outline:none;transition:border .18s,background .18s;
+}
+.inp:focus{border-color:rgba(255,255,255,0.26);background:rgba(255,255,255,0.08)}
+.inp::placeholder{color:rgba(255,255,255,0.2)}
+select.inp{cursor:pointer;appearance:none;-webkit-appearance:none;font-size:12px}
+textarea.inp{resize:none;line-height:1.65}
+input[type=time].inp{color:rgba(255,255,255,0.7)}
+input[type=time].inp::-webkit-calendar-picker-indicator{filter:invert(.35)}
+
+.ghost{
+  width:100%;height:38px;border-radius:8px;
+  border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);
+  color:rgba(255,255,255,0.6);font-family:'DM Sans',sans-serif;
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .18s;letter-spacing:.03em;
+}
+.ghost:hover{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.18)}
+
+/* presets */
+.pre-row{display:flex;gap:5px;flex-wrap:wrap}
+.pre{
+  padding:5px 11px;border-radius:6px;
+  border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.04);
+  color:rgba(255,255,255,0.45);font-size:11px;font-weight:500;
+  cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;
+}
+.pre:hover{border-color:rgba(255,255,255,0.2);color:rgba(255,255,255,0.75)}
+.pre.on{border-color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.1);color:#fff}
+
+.stepper{display:flex;align-items:center;gap:8px}
+.st-btn{
+  width:28px;height:28px;border-radius:6px;
+  border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.05);
+  color:#fff;font-size:15px;cursor:pointer;transition:all .18s;
+  font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.st-btn:hover{background:rgba(255,255,255,0.12)}
+.st-val{font-size:20px;font-weight:300;color:#fff;min-width:40px;text-align:center;letter-spacing:-1px;font-family:'DM Mono',monospace}
+.st-unit{font-size:11px;color:rgba(255,255,255,0.3)}
+
+/* stats */
+.sg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.sb{background:rgba(255,255,255,0.04);border-radius:8px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,0.06)}
+.sn{font-size:24px;font-weight:300;color:#fff;line-height:1;font-family:'DM Mono',monospace}
+.sl{font-size:10px;color:rgba(255,255,255,0.28);margin-top:3px;letter-spacing:.05em}
+.mood-row{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.mb{font-size:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:6px 10px;cursor:pointer;transition:all .18s;line-height:1}
+.mb:hover,.mb.sel{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.18)}
+.streakrow{display:flex;gap:3px;flex-wrap:wrap}
+.sqr{width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.07)}
+.sqr.on{background:rgba(255,255,255,0.55)}
+
+/* note footer */
+.nf{display:flex;justify-content:space-between}
+.nw{font-size:11px;color:rgba(255,255,255,0.22)}
+.ns{font-size:11px;color:rgba(100,210,130,.55);transition:opacity .4s}
+
+/* music panel */
+.tlist{display:flex;flex-direction:column;gap:4px}
+.titem{
+  display:flex;align-items:center;gap:9px;padding:9px 11px;
+  border-radius:8px;background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all .18s;
+}
+.titem:hover{background:rgba(255,255,255,0.06)}
+.titem.playing{border-color:rgba(255,255,255,0.24);background:rgba(255,255,255,0.08)}
+.tico{width:30px;height:30px;border-radius:7px;flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .18s}
+.titem.playing .tico{background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.2)}
+.tinfo{flex:1;min-width:0}
+.tname{font-size:12px;color:rgba(255,255,255,0.65);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.titem.playing .tname{color:rgba(255,255,255,0.92)}
+.tmood{font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;letter-spacing:.03em}
+.tplay{
+  width:26px;height:26px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);
+  color:rgba(255,255,255,0.45);font-size:9px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .18s;
+  font-family:'DM Sans',sans-serif;
+}
+.titem.playing .tplay{background:rgba(255,255,255,0.16);border-color:rgba(255,255,255,0.28);color:#fff}
+.vol-row{display:flex;align-items:center;gap:10px}
+.vl{font-size:11px;color:rgba(255,255,255,0.3);min-width:44px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:2px;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;flex:1;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;cursor:pointer;border:none}
+
+.nowplay{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09)}
+.bars{display:flex;gap:2px;align-items:flex-end;height:12px;flex-shrink:0}
+.bar{width:2px;border-radius:2px;background:rgba(255,255,255,0.7);animation:ba 1s ease-in-out infinite}
+.bar:nth-child(1){height:5px;animation-delay:0s}.bar:nth-child(2){height:9px;animation-delay:.15s}.bar:nth-child(3){height:6px;animation-delay:.3s}.bar:nth-child(4){height:10px;animation-delay:.08s}
+@keyframes ba{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+.bars.paused .bar{animation-play-state:paused}
+.nptxt{font-size:11px;color:rgba(255,255,255,0.55);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* schedule */
+.sched-list{display:flex;flex-direction:column;gap:4px}
+.sched-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)}
+.sched-item.now{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.06)}
+.stime{font-size:11px;color:rgba(255,255,255,0.35);min-width:38px;font-family:'DM Mono',monospace}
+.stxt{font-size:12px;color:rgba(255,255,255,0.68);flex:1}
+.sdel{background:none;border:none;color:rgba(255,255,255,0.18);cursor:pointer;font-size:13px;padding:0;transition:color .18s;font-family:'DM Sans',sans-serif}
+.sdel:hover{color:rgba(255,80,60,.7)}
+.trow{display:flex;gap:6px}
+input[type=time]{width:82px;flex-shrink:0}
+
+/* overlay + toast */
+#ov{position:fixed;inset:0;z-index:25;display:none}
+#ov.on{display:block}
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:100;background:rgba(8,7,12,0.88);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 18px;font-size:12px;color:rgba(255,255,255,0.82);backdrop-filter:blur(20px);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;letter-spacing:.02em}
+#toast.show{opacity:1}
+.empty-hint{text-align:center;font-size:12px;color:rgba(255,255,255,0.22);padding:14px 0;font-style:italic}
+.add-row2{display:flex;gap:6px}
+.add-row2 .inp{flex:1}
+</style>
+</head>
+<body>
+
+<div id="bg"><div id="bg-a"></div><div id="bg-b"></div><div id="bg-dim"></div><div id="bg-vig"></div></div>
+<div id="ov" onclick="closeAll()"></div>
+<div id="toast"></div>
+
+<div id="shell">
+
+  <!-- TOP BAR -->
+  <header id="topbar">
+    <div class="logo">Snoozy_sapiens</div>
+    <div class="nav-pills">
+      <button class="icon-btn" id="ib-settings" title="Settings" onclick="tog('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="icon-btn" id="ib-schedule" title="Schedule" onclick="tog('schedule')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+      <button class="icon-btn" id="ib-notes" title="Notes" onclick="tog('notes')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+      <button class="icon-btn" id="ib-stats" title="Stats" onclick="tog('stats')"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
+      <button class="icon-btn" id="ib-music" title="Music" onclick="tog('music')"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+    </div>
+  </header>
+
+  <!-- CENTER: timer floats freely over background -->
+  <div id="center">
+    <div id="sess-label">25 minute session</div>
+
+    <div id="clock-wrap">
+      <div id="clock">25:00</div>
+    </div>
+    <div id="prog-bar-wrap">
+      <div id="prog-track"><div id="prog-fill"></div></div>
+    </div>
+
+    <div class="pips" id="pips"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+
+    <button id="btn-start" onclick="startFocus()">Start Focusing</button>
+    <div class="running-btns" id="running-btns">
+      <button id="btn-pause" onclick="pauseResume()">Pause</button>
+      <button id="btn-reset" onclick="resetTimer()"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg></button>
+    </div>
+
+    <!-- inline task strip, like the reference -->
+    <div id="task-strip">
+      <div id="task-strip-head">
+        <span id="task-strip-label">Tasks</span>
+        <button id="task-add-btn" onclick="toggleTaskInput()" title="Add task">+</button>
+      </div>
+      <div id="task-strip-input-row">
+        <input id="ts-inp" class="inp" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)" type="text" placeholder="Add a task..." onkeydown="if(event.key==='Enter')tsAdd()"/>
+        <select id="ts-prio" class="inp" style="width:62px;flex-shrink:0;font-size:11px;padding:8px 6px">
+          <option value="high">High</option>
+          <option value="med" selected>Med</option>
+          <option value="low">Low</option>
+        </select>
+        <button id="ts-save" onclick="tsAdd()">Add</button>
+      </div>
+      <div id="task-strip-list"><div class="ts-empty">No tasks yet</div></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM SCENE BAR -->
+  <div id="bottombar">
+    <div class="scene-pill">
+      <div class="sc on" id="sc0" onclick="setScene(0)" title="Arnor"></div>
+      <div class="sc" id="sc1" onclick="setScene(1)" title="Birds of Passage"></div>
+      <div class="sc" id="sc2" onclick="setScene(2)" title="Evening Improvisation"></div>
+      <div class="sc" id="sc3" onclick="setScene(3)" title="Mantron"></div>
+      <div class="sc" id="sc4" onclick="setScene(4)" title="Santoor & Tabla"></div>
+      <div class="sc" id="sc5" onclick="setScene(5)" title="Spa Relax"></div>
+      <div class="sc" id="sc6" onclick="setScene(6)" title="Sunset Landscape"></div>
+      <span id="sc-label">Arnor</span>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- ══ SETTINGS (left) ══ -->
+<div class="panel left" id="panel-settings">
+  <div class="ph"><span class="ph-title">Timer settings</span><button class="ph-x" onclick="cp('settings')">×</button></div>
+  <div class="pb">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="p-lbl">Focus duration</span>
+      <div class="pre-row" id="fp-row">
+        <button class="pre on" onclick="pfp(this,15)">15 min</button>
+        <button class="pre" onclick="pfp(this,25)">25 min</button>
+        <button class="pre" onclick="pfp(this,45)">45 min</button>
+        <button class="pre" onclick="pfp(this,60)">60 min</button>
+        <button class="pre" onclick="pfp(this,90)">90 min</button>
+      </div>
+      <div class="stepper"><button class="st-btn" onclick="adjF(-5)">−</button><span class="st-val" id="fv">25</span><span class="st-unit">min</span><button class="st-btn" onclick="adjF(5)">+</button></div>
+    </div>
+    <hr class="p-hr"/>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="p-lbl">Break duration</span>
+      <div class="pre-row" id="bp-row">
+        <button class="pre on" onclick="pbp(this,5)">5 min</button>
+        <button class="pre" onclick="pbp(this,10)">10 min</button>
+        <button class="pre" onclick="pbp(this,15)">15 min</button>
+        <button class="pre" onclick="pbp(this,20)">20 min</button>
+      </div>
+      <div class="stepper"><button class="st-btn" onclick="adjB(-1)">−</button><span class="st-val" id="bv">5</span><span class="st-unit">min</span><button class="st-btn" onclick="adjB(1)">+</button></div>
+    </div>
+    <hr class="p-hr"/>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="p-lbl">Sessions before long break</span>
+      <div class="stepper"><button class="st-btn" onclick="adjS(-1)">−</button><span class="st-val" id="sv">4</span><span class="st-unit">sessions</span><button class="st-btn" onclick="adjS(1)">+</button></div>
+    </div>
+    <button class="ghost" onclick="applySettings()">Apply settings</button>
+  </div>
+</div>
+
+<!-- ══ SCHEDULE (left) ══ -->
+<div class="panel left" id="panel-schedule">
+  <div class="ph"><span class="ph-title">Today's schedule</span><button class="ph-x" onclick="cp('schedule')">×</button></div>
+  <div class="pb">
+    <div class="trow">
+      <input class="inp" type="time" id="sched-t" style="width:82px;flex-shrink:0"/>
+      <input class="inp" id="sched-inp" type="text" placeholder="What's planned..." style="flex:1" onkeydown="if(event.key==='Enter')addSched()"/>
+    </div>
+    <button class="ghost" onclick="addSched()">+ Add to schedule</button>
+    <div class="sched-list" id="sched-list"><div class="empty-hint">Your schedule is clear.</div></div>
+  </div>
+</div>
+
+<!-- ══ NOTES (right) ══ -->
+<div class="panel right" id="panel-notes">
+  <div class="ph"><span class="ph-title">Study notes</span><button class="ph-x" onclick="cp('notes')">×</button></div>
+  <div class="pb">
+    <textarea class="inp" id="notepad" rows="14" placeholder="Capture ideas, key points, formulas...&#10;&#10;Auto-saves to your browser." oninput="onNote()"></textarea>
+    <div class="nf"><span class="nw" id="nwords">0 words</span><span class="ns" id="nsaved" style="opacity:0">saved</span></div>
+    <button class="ghost" onclick="exportNote()">Export as .txt</button>
+  </div>
+</div>
+
+<!-- ══ STATS (right) ══ -->
+<div class="panel right" id="panel-stats">
+  <div class="ph"><span class="ph-title">Your stats</span><button class="ph-x" onclick="cp('stats')">×</button></div>
+  <div class="pb">
+    <div class="sg">
+      <div class="sb"><div class="sn" id="s-s">0</div><div class="sl">sessions</div></div>
+      <div class="sb"><div class="sn" id="s-t">0</div><div class="sl">tasks done</div></div>
+      <div class="sb"><div class="sn" id="s-m">0</div><div class="sl">min focused</div></div>
+    </div>
+    <hr class="p-hr"/>
+    <span class="p-lbl">How are you feeling?</span>
+    <div class="mood-row"><button class="mb" onclick="pickMood(this)">😊</button><button class="mb" onclick="pickMood(this)">😐</button><button class="mb" onclick="pickMood(this)">😤</button><button class="mb" onclick="pickMood(this)">😴</button><button class="mb" onclick="pickMood(this)">🔥</button></div>
+    <hr class="p-hr"/>
+    <span class="p-lbl">14-day streak</span>
+    <div class="streakrow" id="streakrow"></div>
+  </div>
+</div>
+
+<!-- ══ MUSIC (right) ══ -->
+<div class="panel right" id="panel-music">
+  <div class="ph"><span class="ph-title">Ambient music</span><button class="ph-x" onclick="cp('music')">×</button></div>
+  <div class="pb">
+    <div id="nowplay-wrap" style="display:none">
+      <div class="nowplay">
+        <div class="bars" id="bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <span class="nptxt" id="nptxt">—</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span class="p-lbl">Volume</span>
+      <div class="vol-row"><span class="vl">Music</span><input type="range" min="0" max="100" value="70" step="1" id="mvol" oninput="setMVol(this.value)"/></div>
+      <div class="vol-row"><span class="vl">Bell</span><input type="range" min="0" max="100" value="65" step="1" id="bvol"/></div>
+    </div>
+    <hr class="p-hr"/>
+    <span class="p-lbl">Choose a track</span>
+    <div class="tlist" id="tlist"></div>
+  </div>
+</div>
+
+<script>
+// ═══ TRACKS + SCENES ═══════════════════════════
+const TRACKS=[
+  {file:'music/Arnor_chosic_com_.mp3',name:'Arnor',mood:'epic & atmospheric',emoji:'🏔️',bg:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=85',color:'#0d0f16'},
+  {file:'music/Birds-Of-Passage-Between-The-Hours-Spheria-Rework-chosic_com_.mp3',name:'Birds of Passage',mood:'dreamy & ethereal',emoji:'🌊',bg:'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1920&q=85',color:'#080e14'},
+  {file:'music/Evening-Improvisation-with-Ethera_chosic_com_.mp3',name:'Evening Improvisation',mood:'soft & meditative',emoji:'🌙',bg:'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=1920&q=85',color:'#0a0c12'},
+  {file:'music/MANTRON_chosic_com_.mp3',name:'Mantron',mood:'focused & ambient',emoji:'⚡',bg:'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1920&q=85',color:'#08090e'},
+  {file:'music/Samuel-Corwin-Santoor-and-Tabla-at-Assi-Ghat-Varanasi_chosic_com_.mp3',name:'Santoor & Tabla',mood:'calm & grounding',emoji:'🪘',bg:'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1920&q=85',color:'#100b06'},
+  {file:'music/Spa-Relax-chosic_com_.mp3',name:'Spa Relax',mood:'peaceful & healing',emoji:'🌿',bg:'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=85',color:'#081008'},
+  {file:'music/Sunset-Landscape_chosic_com_.mp3',name:'Sunset Landscape',mood:'warm & serene',emoji:'🌅',bg:'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1920&q=85',color:'#120d06'},
+];
+
+let curScene=0,activeL='a';
+
+TRACKS.forEach((t,i)=>{
+  const d=document.getElementById('sc'+i);
+  if(!d)return;
+  d.style.background=t.color;
+  const img=new Image();img.onload=()=>d.style.backgroundImage=`url(${img.src})`;
+  img.src=t.bg.replace('w=1920','w=80');
+});
+
+function setScene(i){
+  curScene=i;
+  document.querySelectorAll('.sc').forEach((d,j)=>d.classList.toggle('on',j===i));
+  document.getElementById('sc-label').textContent=TRACKS[i].name;
+  const nxt=activeL==='a'?'b':'a';
+  const el=document.getElementById('bg-'+nxt);
+  el.style.backgroundImage=`url('${TRACKS[i].bg}')`;
+  requestAnimationFrame(()=>{
+    el.style.opacity='1';
+    document.getElementById('bg-'+activeL).style.opacity='0';
+    activeL=nxt;
+  });
+}
+(()=>{const a=document.getElementById('bg-a');a.style.backgroundImage=`url('${TRACKS[0].bg}')`;a.style.opacity='1';})();
+
+// ═══ TIMER ═════════════════════════════════════
+let focM=25,brkM=5,sessB4=4;
+let tLeft=focM*60,running=false,isBreak=false;
+let ticker=null,sessComp=0,tskDone=0,minsFoc=0;
+const $=id=>document.getElementById(id);
+
+function fmt(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+
+function drawBar(){
+  const total=(isBreak?brkM:focM)*60;
+  const pct=tLeft/total*100;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-fill').style.background=isBreak?'rgba(140,220,170,0.75)':'rgba(255,255,255,0.72)';
+}
+function syncUI(){
+  $('clock').textContent=fmt(tLeft);
+  document.title=fmt(tLeft)+' — '+(isBreak?'Break':'Focus');
+  $('sess-label').textContent=`${isBreak?brkM:focM} minute ${isBreak?'break':'session'}`;
+  drawBar();
+  document.querySelectorAll('.pip').forEach((p,i)=>p.classList.toggle('lit',i<(sessComp%sessB4)));
+  $('s-s').textContent=sessComp;
+  $('s-t').textContent=tskDone;
+  $('s-m').textContent=Math.round(minsFoc);
+}
+
+function showIdle(){$('btn-start').style.display='';$('running-btns').style.display='none'}
+function showRunning(){$('btn-start').style.display='none';$('running-btns').style.display='flex';$('btn-pause').textContent='Pause'}
+function showPaused(){$('btn-start').style.display='none';$('running-btns').style.display='flex';$('btn-pause').textContent='Resume'}
+
+function startFocus(){
+  if(running)return;running=true;showRunning();
+  ticker=setInterval(()=>{
+    tLeft--;if(!isBreak)minsFoc+=1/60;syncUI();
+    if(tLeft<=0){clearInterval(ticker);running=false;onEnd();}
+  },1000);
+}
+function pauseResume(){
+  if(running){clearInterval(ticker);running=false;showPaused();pauseBars();}
+  else{startFocus();resumeBars();}
+}
+function resetTimer(){clearInterval(ticker);running=false;tLeft=(isBreak?brkM:focM)*60;syncUI();showIdle();pauseBars();}
+function onEnd(){
+  bell();
+  if(!isBreak){
+    sessComp++;
+    toast(sessComp%sessB4===0?'Great work! Take a longer break.':'Session done! Short break time.');
+    goBreak();
+  }else{toast('Break over — time to focus!');goFocus();}
+}
+function goBreak(){
+  isBreak=true;tLeft=brkM*60;
+  document.getElementById('shell').classList.add('brk-mode');
+  $('btn-start').textContent='Start break';syncUI();showIdle();
+}
+function goFocus(){
+  isBreak=false;tLeft=focM*60;
+  document.getElementById('shell').classList.remove('brk-mode');
+  $('btn-start').textContent='Start Focusing';syncUI();showIdle();
+}
+
+// ═══ SETTINGS ══════════════════════════════════
+let pF=25,pB=5,pS=4;
+function pfp(btn,v){document.querySelectorAll('#fp-row .pre').forEach(b=>b.classList.remove('on'));btn.classList.add('on');pF=v;$('fv').textContent=v;}
+function adjF(d){pF=Math.max(1,Math.min(120,pF+d));$('fv').textContent=pF;document.querySelectorAll('#fp-row .pre').forEach(b=>b.classList.remove('on'));}
+function pbp(btn,v){document.querySelectorAll('#bp-row .pre').forEach(b=>b.classList.remove('on'));btn.classList.add('on');pB=v;$('bv').textContent=v;}
+function adjB(d){pB=Math.max(1,Math.min(60,pB+d));$('bv').textContent=pB;document.querySelectorAll('#bp-row .pre').forEach(b=>b.classList.remove('on'));}
+function adjS(d){pS=Math.max(1,Math.min(8,pS+d));$('sv').textContent=pS;}
+function applySettings(){
+  focM=pF;brkM=pB;sessB4=pS;clearInterval(ticker);running=false;
+  const p=$('pips');p.innerHTML='';
+  for(let i=0;i<sessB4;i++){const d=document.createElement('div');d.className='pip';p.appendChild(d);}
+  goFocus();cp('settings');toast('Settings applied');
+}
+
+// ═══ PANELS ════════════════════════════════════
+const LP=['settings','schedule'];
+const RP=['notes','stats','music'];
+const openP=new Set();
+function tog(name){
+  if(openP.has(name)){cp(name);return;}
+  const grp=LP.includes(name)?LP:RP;
+  grp.forEach(p=>{if(p!==name&&openP.has(p))cp(p);});
+  openP.add(name);
+  $('panel-'+name).classList.add('open');
+  const ib=$('ib-'+name);if(ib)ib.classList.add('on');
+  $('ov').classList.add('on');
+}
+function cp(name){
+  openP.delete(name);
+  $('panel-'+name).classList.remove('open');
+  const ib=$('ib-'+name);if(ib)ib.classList.remove('on');
+  if(openP.size===0)$('ov').classList.remove('on');
+}
+function closeAll(){[...openP].forEach(p=>cp(p));}
+
+// ═══ TASKS (inline strip) ══════════════════════
+let tasks=[],activeT=-1;
+let tsInputOpen=false;
+function toggleTaskInput(){
+  tsInputOpen=!tsInputOpen;
+  const row=$('task-strip-input-row');
+  row.classList.toggle('show',tsInputOpen);
+  if(tsInputOpen)setTimeout(()=>$('ts-inp').focus(),50);
+  $('task-add-btn').textContent=tsInputOpen?'×':'+';
+}
+function tsAdd(){
+  const inp=$('ts-inp'),prio=$('ts-prio').value,txt=inp.value.trim();
+  if(!txt)return;
+  tasks.push({text:txt,prio,done:false});
+  inp.value='';
+  if(activeT<0)activeT=0;
+  renderTasks();
+}
+function renderTasks(){
+  const el=$('task-strip-list');
+  if(!tasks.length){el.innerHTML='<div class="ts-empty">No tasks yet</div>';return;}
+  const ord={high:0,med:1,low:2};
+  const s=[...tasks].sort((a,b)=>(a.done?1:0)-(b.done?1:0)||ord[a.prio]-ord[b.prio]);
+  el.innerHTML='';
+  s.forEach(t=>{
+    const i=tasks.indexOf(t);
+    const d=document.createElement('div');
+    const pc={high:'bh',med:'bm',low:'bl'}[t.prio];
+    d.className='ts-item'+(t.done?' ts-done':'')+(i===activeT&&!t.done?' ts-active':'');
+    d.innerHTML=`<div class="ts-ck${t.done?' c':''}" onclick="event.stopPropagation();togT(${i})"></div><span class="ts-txt">${t.text}</span><span class="ts-badge ${pc}">${t.prio}</span><button class="ts-del" onclick="event.stopPropagation();delT(${i})">×</button>`;
+    d.addEventListener('click',()=>{activeT=i;renderTasks();});
+    el.appendChild(d);
+  });
+}
+function togT(i){tasks[i].done=!tasks[i].done;tskDone=tasks.filter(t=>t.done).length;syncUI();renderTasks();}
+function delT(i){tasks.splice(i,1);if(activeT>=tasks.length)activeT=tasks.length-1;renderTasks();}
+
+// ═══ SCHEDULE ══════════════════════════════════
+let scheds=[];
+function addSched(){
+  const t=$('sched-t').value,txt=$('sched-inp').value.trim();
+  if(!txt)return;
+  scheds.push({time:t||'--:--',text:txt});
+  scheds.sort((a,b)=>a.time.localeCompare(b.time));
+  $('sched-inp').value='';renderScheds();
+}
+function renderScheds(){
+  const el=$('sched-list');
+  if(!scheds.length){el.innerHTML='<div class="empty-hint">Your schedule is clear.</div>';return;}
+  const now=new Date();
+  const nowS=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  el.innerHTML='';
+  scheds.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='sched-item'+(s.time<=nowS?' now':'');
+    d.innerHTML=`<span class="stime">${s.time}</span><span class="stxt">${s.text}</span><button class="sdel" onclick="delSched(${i})">×</button>`;
+    el.appendChild(d);
+  });
+}
+function delSched(i){scheds.splice(i,1);renderScheds();}
+
+// ═══ NOTES ═════════════════════════════════════
+let nsT=null;
+try{const n=localStorage.getItem('focus_notes');if(n)$('notepad').value=n;}catch(e){}
+function onNote(){
+  const txt=$('notepad').value;
+  const w=txt.trim()?txt.trim().split(/\s+/).length:0;
+  $('nwords').textContent=w+' word'+(w===1?'':'s');
+  clearTimeout(nsT);
+  nsT=setTimeout(()=>{
+    try{localStorage.setItem('focus_notes',txt);}catch(e){}
+    const s=$('nsaved');s.style.opacity='1';setTimeout(()=>s.style.opacity='0',1400);
+  },700);
+}
+function exportNote(){
+  const txt=$('notepad').value;
+  if(!txt.trim()){toast('Nothing to export yet.');return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));
+  a.download=`notes-${new Date().toISOString().slice(0,10)}.txt`;a.click();
+}
+
+// ═══ STATS ═════════════════════════════════════
+function pickMood(btn){document.querySelectorAll('.mb').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');}
+(()=>{const el=$('streakrow');for(let i=0;i<14;i++){const d=document.createElement('div');d.className='sqr'+(Math.random()>.38?' on':'');el.appendChild(d);}})();
+
+// ═══ MUSIC ═════════════════════════════════════
+let audioEl=null,curTrack=-1,mVol=0.7;
+
+function buildTrackList(){
+  const el=$('tlist');el.innerHTML='';
+  TRACKS.forEach((t,i)=>{
+    const d=document.createElement('div');
+    d.className='titem';d.id='tr'+i;
+    d.innerHTML=`<div class="tico">${t.emoji}</div><div class="tinfo"><div class="tname">${t.name}</div><div class="tmood">${t.mood}</div></div><button class="tplay" id="tp${i}" onclick="playTrack(${i})">▶</button>`;
+    el.appendChild(d);
+  });
+}
+
+function playTrack(i){
+  // Same track toggle
+  if(curTrack===i&&audioEl){
+    if(audioEl.paused){
+      audioEl.play().then(()=>{updateNP(i,true);resumeBars();}).catch(()=>toast('Tap the play button again to start'));
+    } else {
+      audioEl.pause();updateNP(i,false);pauseBars();
+    }
+    return;
+  }
+  // Stop previous
+  if(audioEl){try{audioEl.pause();audioEl.src='';}catch(e){}}
+  curTrack=i;
+  setScene(i);
+
+  audioEl=new Audio();
+  audioEl.loop=true;
+  audioEl.volume=mVol;
+  audioEl.preload='auto';
+
+  // Update UI immediately
+  document.querySelectorAll('.titem').forEach((el,j)=>el.classList.toggle('playing',j===i));
+  document.querySelectorAll('.tplay').forEach((el,j)=>el.textContent=j===i?'■':'▶');
+
+  audioEl.addEventListener('canplay',()=>{
+    audioEl.play().then(()=>{updateNP(i,true);resumeBars();}).catch(err=>{
+      console.warn('Autoplay blocked:',err);
+      toast('Click the ■ button once more to start audio');
+    });
+  },{once:true});
+
+  audioEl.addEventListener('error',(e)=>{
+    toast('Could not load: '+TRACKS[i].name+' — check music/ folder');
+    console.error('Audio error',e,audioEl.error);
+  },{once:true});
+
+  audioEl.src=TRACKS[i].file;
+  audioEl.load();
+}
+
+function updateNP(i,playing){
+  const w=$('nowplay-wrap'),np=$('nptxt'),bars=$('bars');
+  if(playing&&i>=0){w.style.display='';np.textContent=TRACKS[i].name+' · '+TRACKS[i].mood;bars.classList.remove('paused');}
+  else{bars.classList.add('paused');}
+}
+
+function setMVol(v){mVol=v/100;if(audioEl)audioEl.volume=mVol;}
+function pauseBars(){const b=$('bars');if(b)b.classList.add('paused');}
+function resumeBars(){const b=$('bars');if(b)b.classList.remove('paused');}
+
+buildTrackList();
+
+// ═══ BELL ═══════════════════════════════════════
+function bell(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const v=$('bvol').value/100;
+    [880,1108,1318].forEach((hz,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.frequency.value=hz;o.type='sine';
+      const t=ctx.currentTime+i*.16;
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v*.55,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+2.2);
+      o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+2.2);
+    });
+  }catch(e){}
+}
+
+// ═══ TOAST ══════════════════════════════════════
+let tT=null;
+function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('show'),3200);}
+
+// ─── INIT
+syncUI();showIdle();
+</script>
+</body>
+</html>
